@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Secret Word</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔐%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#070a1a; --bg2:#0d1230; --panel:rgba(16,22,52,.72); --line:rgba(130,160,255,.2);
+  --text:#eaf0ff; --muted:#8c97c2; --field:rgba(0,0,0,.28); --field2:rgba(0,0,0,.22);
+  --cyan:#2cd6ff; --green:#30f2a4; --red:#ff4f70; --gold:#ffd04d; --violet:#8f63ff;
+  --sans:"Sora",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --bg:#eef2ff; --bg2:#dfe6ff; --panel:rgba(255,255,255,.82); --line:rgba(60,80,170,.22);
+    --text:#12163a; --muted:#59628f; --cyan:#0a8fbd; --green:#079a62; --red:#d6264b; --gold:#b98600; --violet:#6a3de8; --field:rgba(255,255,255,.75); --field2:rgba(255,255,255,.55);
+  }
+}
+:root[data-theme="dark"]{ --bg:#070a1a; --bg2:#0d1230; --text:#eaf0ff; --muted:#8c97c2; }
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+[hidden]{display:none!important}
+body{
+  margin:0;min-height:100%;font-family:var(--sans);color:var(--text);
+  background:
+    radial-gradient(900px 500px at 12% -10%,color-mix(in srgb,var(--violet) 30%,transparent),transparent 60%),
+    radial-gradient(800px 500px at 100% 0,color-mix(in srgb,var(--cyan) 22%,transparent),transparent 60%),
+    linear-gradient(var(--bg),var(--bg2));
+  background-attachment:fixed;
+}
+.wrap{max-width:1020px;margin:0 auto;padding:28px 18px 60px}
+header{margin-bottom:22px}
+h1{margin:0;font-size:clamp(34px,6vw,54px);font-weight:800;letter-spacing:-.03em;line-height:1}
+h1 span{color:var(--cyan);text-shadow:0 0 24px color-mix(in srgb,var(--cyan) 60%,transparent)}
+header p{margin:10px 0 0;color:var(--muted);max-width:52ch;line-height:1.5}
+.grid{display:grid;gap:18px;grid-template-columns:1.15fr .85fr;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.game{box-shadow:0 0 0 1px color-mix(in srgb,var(--cyan) 25%,transparent),0 0 40px color-mix(in srgb,var(--cyan) 18%,transparent)}
+h2{margin:0 0 14px;font-size:17px;font-weight:600}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.row .field{flex:1 1 130px}
+input{
+  width:100%;padding:13px 14px;font:600 17px var(--mono);color:var(--text);
+  background:var(--field);border:1.5px solid var(--line);border-radius:12px;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+input::placeholder{color:var(--muted);opacity:.8;font-weight:500}
+input:focus-visible{border-color:var(--c,var(--cyan));box-shadow:0 0 0 3px color-mix(in srgb,var(--c,var(--cyan)) 30%,transparent)}
+input:disabled{opacity:.45}
+#length{--c:var(--red)} #guess{--c:var(--green)} #scoreSearch{--c:var(--cyan)}
+button{
+  font:600 15px var(--sans);padding:13px 18px;border:0;border-radius:12px;cursor:pointer;color:#fff;
+  background:var(--violet);box-shadow:0 6px 20px color-mix(in srgb,var(--violet) 45%,transparent);
+  transition:transform .12s,filter .12s;
+}
+button:hover{filter:brightness(1.12)} button:active{transform:translateY(1px)}
+button:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+button.ghost{background:transparent;color:var(--text);border:1.5px solid var(--line);box-shadow:none}
+button.danger{background:var(--red);box-shadow:0 6px 20px color-mix(in srgb,var(--red) 40%,transparent)}
+.hud{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 6px}
+.chip{
+  font:600 15px var(--mono);padding:8px 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--field2);color:var(--muted);min-width:0;
+}
+.chip b{color:var(--text);font-weight:600}
+#chipTime b{color:var(--green)} #chipLock.open{color:var(--gold);border-color:var(--gold)}
+/* the tumblers: one per letter of the secret word */
+#slots{display:flex;flex-wrap:wrap;gap:7px;margin:16px 0;min-height:56px;align-content:flex-start}
+.tile{
+  width:40px;height:52px;display:grid;place-items:center;border-radius:10px;
+  font:600 22px var(--mono);border:1.5px solid var(--line);background:var(--field);color:var(--muted);
+  transition:background .15s,border-color .15s,color .15s,box-shadow .15s;
+}
+.tile.next{border-color:var(--cyan);box-shadow:0 0 0 3px color-mix(in srgb,var(--cyan) 22%,transparent)}
+.tile.ok{color:var(--green);border-color:var(--green);background:color-mix(in srgb,var(--green) 14%,transparent);box-shadow:0 0 14px color-mix(in srgb,var(--green) 35%,transparent)}
+.tile.bad{color:var(--red);border-color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
+.tile.idle::after{content:"?";opacity:.35}
+.tile.miss{color:var(--gold);border-color:var(--gold);border-style:dashed;background:color-mix(in srgb,var(--gold) 12%,transparent)}
+.hint{font-size:13px;color:var(--muted);margin:8px 0 0;line-height:1.45}
+#message{min-height:26px;margin-top:14px;font-weight:600;line-height:1.5}
+#message.win{color:var(--green)} #message.lose{color:var(--red)} #message .rec{color:var(--gold)}
+#message code{font:600 18px var(--mono);letter-spacing:.06em;color:var(--gold);word-break:break-all}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.shake{animation:shake .35s}
+@keyframes pop{50%{transform:translateY(-8px)}}
+.won .tile{animation:pop .5s both;animation-delay:calc(var(--i)*35ms)}
+/* scores */
+.stack{display:grid;gap:18px}
+.entry{
+  position:relative;display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:12px 14px;margin-top:10px;border-radius:12px;border:1px solid var(--line);background:var(--field2);
+  font-weight:600;
+}
+.entry .t{font-family:var(--mono);color:var(--green)}
+.entry.fav{border-color:var(--gold);box-shadow:0 0 14px color-mix(in srgb,var(--gold) 30%,transparent)}
+.ctl{display:flex;gap:6px}
+.ctl button{padding:5px 9px;font-size:15px;color:var(--text);background:var(--field);box-shadow:none;border:1px solid var(--line)}
+@media (hover:hover){ .ctl{opacity:0;transition:opacity .15s} .entry:hover .ctl,.entry:focus-within .ctl{opacity:1} }
+.fast{
+  margin-top:4px;padding:16px;border-radius:14px;border:1.5px solid var(--gold);
+  background:color-mix(in srgb,var(--gold) 9%,transparent);box-shadow:0 0 26px color-mix(in srgb,var(--gold) 25%,transparent);
+}
+.fast .big{font:600 28px var(--mono);color:var(--gold)}
+.fast small{color:var(--muted)}
+.empty{color:var(--muted);padding:10px 2px;font-size:14px;line-height:1.5}
+/* dialog + toast */
+#modal{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.6);z-index:50;padding:20px}
+#modal .dialog{max-width:380px;width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:22px}
+#modal p{margin:0 0 18px;line-height:1.5} #modal .row{justify-content:flex-end}
+#toast{
+  position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--bg2);border:1px solid var(--gold);color:var(--text);padding:12px 18px;border-radius:12px;z-index:60;
+  max-width:90vw;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.4);
+}
+@media (max-width:480px){.card{padding:18px}.tile{width:34px;height:46px;font-size:19px}#slots{gap:6px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>Secret <span>Word</span></h1>
+    <p>Pick a length and the computer builds a random word from A–Z and a–z. Type your guess and every letter lights up green if it’s right, red if it’s not. Capital letters count.</p>
+  </header>
+
+  <div class="grid">
+    <section class="card game" aria-label="Game">
+      <div class="row">
+        <div class="field">
+          <label for="length">Word length</label>
+          <input id="length" type="number" min="1" max="64" inputmode="numeric" placeholder="e.g. 6">
+        </div>
+        <button id="startBtn">Generate word</button>
+        <button id="giveUpBtn" class="danger" hidden>Give up</button>
+      </div>
+
+      <div class="hud" id="hud" hidden>
+        <div class="chip" id="chipTime">Time <b id="stopwatch">00:00.00</b></div>
+        <div class="chip" id="chipLock">Give up unlocks in <b id="countdown">2:00</b></div>
+        <div class="chip">Matched <b id="matched">0/0</b></div>
+      </div>
+
+      <div id="slots" aria-hidden="true"></div>
+
+      <label for="guess">Your guess</label>
+      <input id="guess" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Generate a word to begin" disabled>
+      <p class="hint">Press Enter to submit once every letter is filled.</p>
+      <div id="message" role="status"></div>
+    </section>
+
+    <aside class="stack" aria-label="Scores">
+      <section class="card">
+        <h2>🏆 High score</h2>
+        <label for="scoreSearch">Search by word length</label>
+        <input id="scoreSearch" type="number" min="1" inputmode="numeric" placeholder="e.g. 6">
+        <div id="searchedScore"></div>
+      </section>
+      <section class="card">
+        <h2>⚡ Fastest time ever</h2>
+        <div class="fast" id="fastestTime"></div>
+        <p class="hint">Only word lengths of 4 or more count.</p>
+      </section>
+      <section class="card">
+        <h2>⭐ Favourites</h2>
+        <div id="favouriteList"></div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<div id="modal" hidden><div class="dialog" role="dialog" aria-modal="true"><p id="mtext"></p>
+  <div class="row"><button class="ghost" id="mno">Cancel</button><button id="mok">Confirm</button></div></div></div>
+<div id="toast" hidden></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const KEY = "secretWordHighScores", LOCK_SECONDS = 120;
+
+/* storage never breaks the game */
+const store = {
+  load(){
+    try { const v = JSON.parse(localStorage.getItem(KEY)); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+    catch(e){ return {}; }
+  },
+  save(v){ try { localStorage.setItem(KEY, JSON.stringify(v)); } catch(e){} }
+};
+let scores = store.load();
+
+let word = "", len = 0, active = false, t0 = 0, timer = null;
+const guess = $("guess"), message = $("message"), slots = $("slots");
+
+/* crypto-grade randomness, like Python’s secrets.choice */
+function randomWord(n){
+  const a = new Uint32Array(n); crypto.getRandomValues(a);
+  return Array.from(a, v => LETTERS[v % LETTERS.length]).join("");
+}
+const fmt = s => {
+  const cs = Math.floor(s * 100), m = Math.floor(cs / 6000), r = (cs % 6000) / 100;
+  return String(m).padStart(2, "0") + ":" + r.toFixed(2).padStart(5, "0");
+};
+
+/* in-page dialog + toast (browser alert/confirm can be blocked in embedded pages) */
+function ask(text){
+  return new Promise(res => {
+    const modal = $("modal"), ok = $("mok"), no = $("mno");
+    $("mtext").textContent = text; modal.hidden = false; ok.focus();
+    const onKey = e => { if(e.key === "Escape") done(false); };
+    const done = v => {
+      modal.hidden = true; ok.onclick = no.onclick = modal.onclick = null;
+      document.removeEventListener("keydown", onKey); res(v);
+    };
+    document.addEventListener("keydown", onKey);
+    ok.onclick = () => done(true); no.onclick = () => done(false);
+    modal.onclick = e => { if(e.target === modal) done(false); };
+  });
+}
+let toastT;
+function toast(text){
+  const t = $("toast"); t.textContent = text; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600);
+}
+
+/* tumblers */
+function buildSlots(){
+  slots.className = ""; slots.innerHTML = "";
+  for(let i = 0; i < len; i++){
+    const d = document.createElement("div"); d.className = "tile idle"; d.style.setProperty("--i", i);
+    slots.appendChild(d);
+  }
+  paint();
+}
+function paint(){
+  const v = guess.value, tiles = slots.children; let hit = 0;
+  for(let i = 0; i < tiles.length; i++){
+    const t = tiles[i];
+    if(i < v.length){
+      const ok = v[i] === word[i]; if(ok) hit++;
+      t.className = "tile " + (ok ? "ok" : "bad"); t.textContent = v[i];
+    } else {
+      t.className = "tile idle" + (active && i === v.length ? " next" : ""); t.textContent = "";
+    }
+  }
+  $("matched").textContent = hit + "/" + tiles.length;
+}
+
+/* timers */
+function tick(){
+  const el = (Date.now() - t0) / 1000;
+  $("stopwatch").textContent = fmt(el);
+  const left = Math.max(0, Math.ceil(LOCK_SECONDS - el));
+  if(left > 0){
+    $("countdown").textContent = Math.floor(left/60) + ":" + String(left % 60).padStart(2,"0");
+  } else if($("giveUpBtn").hidden){
+    $("chipLock").classList.add("open"); $("chipLock").textContent = "Give up is unlocked";
+    $("giveUpBtn").hidden = false;
+  }
+}
+function stopTimer(){ clearInterval(timer); active = false; $("giveUpBtn").hidden = true; paint(); }
+
+async function startGame(){
+  const n = parseInt($("length").value, 10);
+  if(isNaN(n) || n <= 0){ toast("Enter a word length greater than 0."); $("length").focus(); return; }
+  if(n > 64){ toast("Keep it to 64 letters or fewer."); return; }
+  if(active && !(await ask("A game is already in progress. Restart with the new length?"))) return;
+
+  clearInterval(timer);
+  len = n; word = randomWord(n); tries = 0; active = true; t0 = Date.now();
+  $("hud").hidden = false; $("giveUpBtn").hidden = true; $("startBtn").textContent = "New word";
+  $("chipLock").classList.remove("open");
+  $("chipLock").innerHTML = 'Give up unlocks in <b id="countdown">2:00</b>';
+  guess.disabled = false; guess.value = ""; guess.placeholder = "Type your guess…";
+  message.className = ""; message.textContent = "Game started. Good luck!";
+  buildSlots(); tick(); timer = setInterval(tick, 50); guess.focus();
+}
+
+guess.addEventListener("input", () => {
+  if(guess.value.length > len) guess.value = guess.value.slice(0, len);
+  paint();
+});
+
+guess.addEventListener("keydown", e => {
+  if(e.key !== "Enter" || !active) return;
+  if(guess.value.length !== len){ message.className = ""; message.textContent = "Word must be exactly " + len + " letters."; return; }
+  if(guess.value === word){
+    const secs = (Date.now() - t0) / 1000;
+    stopTimer(); guess.disabled = true; slots.classList.add("won");
+    message.className = "win";
+    message.innerHTML = "🎉 Correct! Solved in " + fmt(secs) + ".";
+    saveScore(len, secs);
+  } else {
+    message.className = ""; message.textContent = "Wrong! Try again.";
+    guess.classList.add("shake"); setTimeout(() => guess.classList.remove("shake"), 350);
+    guess.select();
+  }
+});
+
+function giveUp(){
+  stopTimer(); guess.disabled = true;
+  Array.from(slots.children).forEach((t, i) => {
+    if(guess.value[i] !== word[i]){ t.className = "tile miss"; t.textContent = word[i]; }
+  });
+  message.className = "lose";
+  message.innerHTML = "💀 You gave up. The secret word was<br><code></code>";
+  message.querySelector("code").textContent = word;
+}
+
+/* scores */
+function saveScore(l, time){
+  const old = scores[l];
+  if(!old || time < old.time){
+    scores[l] = { time, favourite: old ? old.favourite : false };
+    store.save(scores);
+    message.insertAdjacentHTML("beforeend", '<br><span class="rec">🏆 New high score!</span>');
+    renderScores();
+  }
+}
+function entryHTML(l, s, withControls){
+  return '<div class="entry' + (s.favourite ? " fav" : "") + '"><span>' + (s.favourite ? "⭐ " : "🏆 ") +
+    "Length " + l + '</span><span class="t">' + fmt(s.time) + "</span>" +
+    (withControls ? '<span class="ctl"><button title="Favourite" aria-label="Toggle favourite" data-fav="' + l + '">' +
+      (s.favourite ? "⭐" : "☆") + '</button><button title="Delete" aria-label="Delete score" data-del="' + l + '">🗑️</button></span>' : "") +
+    "</div>";
+}
+function renderSearch(){
+  const n = parseInt($("scoreSearch").value, 10), box = $("searchedScore");
+  if(isNaN(n) || n <= 0){ box.innerHTML = '<div class="empty">Enter a word length to see your best time.</div>'; return; }
+  box.innerHTML = scores[n] ? entryHTML(n, scores[n], true)
+    : '<div class="empty">❌ No high score for length ' + n + ' yet.</div>';
+}
+function renderFastest(){
+  let best = null, bl = null;
+  for(const k in scores){
+    const l = +k;
+    if(l > 3 && (best === null || scores[k].time < best)){ best = scores[k].time; bl = l; }
+  }
+  $("fastestTime").innerHTML = best === null ? '<div class="empty" style="padding:0">No qualifying score yet.</div>'
+    : '<div class="big">👑 ' + fmt(best) + "</div><small>Length " + bl + "</small>";
+}
+function renderFavs(){
+  const f = Object.keys(scores).filter(k => scores[k].favourite).map(Number).sort((a, b) => a - b);
+  $("favouriteList").innerHTML = f.length ? f.map(l => entryHTML(l, scores[l], true)).join("")
+    : '<div class="empty">No favourites yet. Find a score above and tap ☆ to pin it here.</div>';
+}
+function renderScores(){ renderSearch(); renderFastest(); renderFavs(); }
+
+document.querySelector(".stack").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if(!b) return;
+  if(b.dataset.fav){ const l = b.dataset.fav; scores[l].favourite = !scores[l].favourite; store.save(scores); renderScores(); }
+  if(b.dataset.del){
+    const l = b.dataset.del;
+    if(await ask("Delete the high score for length " + l + "?")){ delete scores[l]; store.save(scores); renderScores(); }
+  }
+});
+
+$("startBtn").addEventListener("click", startGame);
+$("giveUpBtn").addEventListener("click", giveUp);
+$("length").addEventListener("keydown", e => { if(e.key === "Enter") startGame(); });
+$("scoreSearch").addEventListener("input", renderSearch);
+renderScores();
+</script>
+</body>
+</html>
